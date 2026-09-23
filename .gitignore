@@ -1,0 +1,15 @@
+# This repo is checked out at the agent's HOME (/home/agent), which also holds
+# secrets and runtime state (.ssh, .claude, work/, ...). Ignore everything at
+# the top level, then re-include only the definition files. This keeps
+# `git add -A` at $HOME safe. Nothing under work/ is ever tracked.
+
+/*
+
+!/.gitignore
+!/CLAUDE.md
+!/README.md
+!/ONBOARDING.md
+!/kit.yaml
+!/LICENSE
+
+.DS_Store
