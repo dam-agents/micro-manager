@@ -1,47 +1,49 @@
 # micro-manager
 
-An agent that catches the tasks you hand out in Slack and forget about.
+You hand out tasks in Slack all day. "Can you check the DNS?" "Who can set up
+staging?" "Jan will send the contract by Friday." Then the conversation scrolls
+away, and a week later nobody remembers who owes what. Often not even you.
 
-Every hour it reads **your own outbound messages**, finds the ones where you
-asked somebody else to do something, and files each new one as an issue in a
-private GitHub repo. It dedupes against every task ever filed — closed ones
-included — so nothing is filed twice and nothing finished comes back.
+micro-manager keeps that list for you. It notices when you ask someone else to
+do something and turns each hand-off into a task you can track. When the work
+is done, you close it.
 
-## How it works
+## The problem
 
-1. **Confirm the identity.** The workspace is checked live every run; a
-   connection's name does not prove which Slack it points at.
-2. **Load the dedupe set first**, from the store, with `--state all`.
-3. **Search your own messages** since the last sweep, paginated.
-4. **Judge each one.** A task means someone else now owes something. Bots and
-   your own to-dos are not tasks. Unsure → file it; a wrong row costs seconds to
-   close, a missed hand-off is the whole problem.
-5. **File what is new** — one issue, with the Slack permalink as its key, a
-   `needs-owner` label when nobody picked it up, and a paraphrase of the context.
+Delegating in chat is fast, and that is exactly why things get lost:
 
-## Setup
+- Asks are buried in threads, between everything else people talk about.
+- Some asks have no owner. "Can someone..." often means nobody.
+- You nudge people ("any update?") and lose track of what you already asked.
+- Your to-do app knows what you owe. Nothing tracks what others owe you.
 
-Install the kit, connect Slack (as yourself, not a bot) and GitHub, and answer
-the onboarding questions: which channels, which repo, who you delegate to, which
-bots you talk to. It ends with a dry run that files nothing until you confirm
-the judgements.
+## What it does
 
-## Files
+- Picks up the tasks you delegate, in the channels you choose.
+- Flags asks that nobody picked up.
+- Treats a follow-up as the same task, not a new one.
+- Never brings back a task you already closed.
+- Writes short notes in its own words, not copies of private messages.
 
-| file | what it is |
-| --- | --- |
-| [`CLAUDE.md`](CLAUDE.md) | the whole run procedure |
-| [`ONBOARDING.md`](ONBOARDING.md) | first-run setup |
-| [`kit.yaml`](kit.yaml) | the starter-kit manifest and the hourly schedule |
-| `work/CONFIG.md` | your instance's config — not in this repo |
+When it is not sure whether something is a task, it adds it. Closing a wrong
+one takes seconds. Missing a real hand-off is the whole problem.
 
-## Limits
+## What it does not do
 
-- **It reads only your outbound messages, never the replies.** An open task
-  means nothing *you* said closed it, not that the other person went quiet.
-- One Slack workspace per instance.
-- Task notes are paraphrased, never verbatim — but the repo still holds context
-  from private conversations. Keep it private.
+- It reads only what you wrote, never the replies. An open task means nothing
+  you said closed it, not that the other person went quiet.
+- It does not chase people for you.
+- It works with one Slack workspace per setup.
+
+## Getting started
+
+Connect Slack as yourself and answer a few questions: which channels to watch,
+who you usually delegate to, and which bots you talk to. A dry run shows you
+what it would add before it adds anything.
+
+Tasks are stored in a SQLite file on the agent's disk (`work/tasks.db`). They
+never leave it. To close a task, tell the agent in chat. The store needs
+Node 22.18 or newer and nothing else. See [`tasks/`](tasks) for the CLI.
 
 ## License
 

@@ -4,8 +4,8 @@ id: micro-manager
 name: Micro Manager
 description: >-
   Reads your own outbound Slack messages every hour, finds the tasks you handed
-  to other people, and files the new ones as GitHub issues. Dedupes against
-  every task ever filed, including closed ones.
+  to other people, and files the new ones in a local SQLite task store.
+  Dedupes against every task ever filed, including closed ones.
 tagline: Everything you delegated in passing, in one list.
 category: productivity
 icon: users
@@ -17,25 +17,21 @@ seed:
 onboarding:
   prompt: >-
     Read ONBOARDING.md in your home directory and follow it to the end. It asks
-    whose Slack is swept and where tasks are filed, writes work/CONFIG.md, and
-    ends with a dry run that files nothing until the operator confirms it.
+    whose Slack is swept, checks the local task store works, writes
+    work/CONFIG.md, and ends with a dry run that files nothing until the
+    operator confirms it.
 connections:
   - accepts: [slack]
     required: true
     note: >-
       Connect as the person whose hand-offs are tracked — the sweep reads their
       own sent messages. A bot account sees nothing useful here.
-  - accepts: [github, github-enterprise]
-    required: true
-    note: >-
-      Needs write access to one repository, which holds one issue per task.
-      Keep it private: task notes carry context from DMs.
 schedules:
   - name: micro-manager-sweep
     cron: "0 8-20 * * 1-5"
     sessionMode: fresh
     task: >-
       Sweep run. Follow CLAUDE.md → "Sweep run": confirm the Slack identity
-      first, load the dedupe set from the store with --state all, search your own
+      first, load the dedupe set with `tasks list` (open and closed), search your own
       messages back to last_sweep_at, judge each one, file only what is new, then
       update last_sweep_at and report.

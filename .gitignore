@@ -11,5 +11,7 @@
 !/ONBOARDING.md
 !/kit.yaml
 !/LICENSE
+!/tasks
+/tasks/node_modules
 
 .DS_Store
