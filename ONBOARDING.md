@@ -6,28 +6,29 @@ Skip if `$HOME/.micro-manager-onboarded` exists.
 real person — this agent reads their own sent messages. Show the operator the
 account and workspace that answered and confirm it is theirs.
 
-**2. Ask four things.**
+**2. Ask three things.**
 
 - Public channels only, or private channels and DMs too? DMs need an explicit
-  yes. Issue notes are a paraphrase either way.
-- Which repo holds the tasks? Offer a new private
-  `<their-account>/delegated-tasks`.
+  yes. Task notes are a paraphrase either way.
 - Who do they delegate to? Names — you resolve the ids next.
 - Which bots do they talk to (`@dam`, a deploy bot)? Messages to those look
   exactly like hand-offs.
 
-**3. Create the store.**
+**3. Check the store.** Tasks live in `work/tasks.db`, a SQLite file the
+`~/tasks/tasks` CLI creates on first use. It needs Node 22.18 or newer (it runs
+TypeScript directly and uses the built-in `node:sqlite`) and nothing else.
 
 ```bash
-gh repo create <owner>/delegated-tasks --private --description "Tasks I handed to people on Slack"
-gh label create delegated   --repo <owner>/delegated-tasks --color 0366d6
-gh label create needs-owner --repo <owner>/delegated-tasks --color d93f0b
+node --version
+~/tasks/tasks list
 ```
 
+`list` must print `[]` on a fresh install. If Node is older than 22.18 or the
+command fails, stop and show the operator the error. Never create or edit
+`work/tasks.db` by hand.
+
 **4. Resolve the people.** `slack_search_users` for each name and each bot. Two
-matches, or an empty display name → ask, never guess. Ask for their GitHub login
-too; if they are not a collaborator on the store repo, leave it out and file
-unassigned.
+matches, or an empty display name → ask, never guess.
 
 **5. Write `work/CONFIG.md`.**
 
@@ -36,9 +37,8 @@ unassigned.
 
 - my_slack_id: U07E31E1UVD
 - workspace_name: Acme
-- store_repo: acme/delegated-tasks
 - channel_types: public_channel,private_channel
-- roster: U05UR59NJCX=Radek Jezek/rjezek, U06H8CF4UUA=Jan Pokorny/jpokorny
+- roster: U05UR59NJCX=Radek Jezek, U06H8CF4UUA=Jan Pokorny
 - bot_ids: U0ARMJVHY2F
 - last_sweep_at:
 ```
@@ -48,10 +48,11 @@ hourly. List the platform schedules and create it only if it is missing — use
 the `platform-outbound` tools, never `CronCreate` or `/loop`.
 
 **7. Dry run, filing nothing.** Sweep the last 24 hours per
-[`CLAUDE.md`](CLAUDE.md), then show a table: message → verdict → the issue you
-would open. Ask which are wrong, fix the config, and only then file the
+[`CLAUDE.md`](CLAUDE.md), then show a table: message → verdict → the task you
+would file. Ask which are wrong, fix the config, and only then file the
 confirmed ones.
 
 **8. Finish.** `date -u +%Y-%m-%dT%H:%M:%SZ > "$HOME/.micro-manager-onboarded"`,
-then report: who is swept, where tasks land, what is not covered, and that the
+then report: who is swept, where tasks land (`work/tasks.db`), how to close
+one (ask in chat), what is not covered, and that the
 sweep reads only outbound messages — never the replies.

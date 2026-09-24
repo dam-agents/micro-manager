@@ -1,0 +1,16 @@
+{
+  "name": "micro-manager-tasks",
+  "private": true,
+  "type": "module",
+  "description": "SQLite task store for micro-manager. Zero runtime dependencies.",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "typecheck": "tsc"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.0",
+    "typescript": "^5.9.0"
+  }
+}
