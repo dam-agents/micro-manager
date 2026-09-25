@@ -52,7 +52,12 @@ the `platform-outbound` tools, never `CronCreate` or `/loop`.
 would file. Ask which are wrong, fix the config, and only then file the
 confirmed ones.
 
-**8. Finish.** `date -u +%Y-%m-%dT%H:%M:%SZ > "$HOME/.micro-manager-onboarded"`,
+**8. Offer the dashboard.** Ask if they want a live task page in the chat
+preview. It needs Interactive artifacts enabled. If yes, start the server and
+publish the page as [`CLAUDE.md`](CLAUDE.md) → "Dashboard" describes. If no,
+skip it; they can ask later.
+
+**9. Finish.** `date -u +%Y-%m-%dT%H:%M:%SZ > "$HOME/.micro-manager-onboarded"`,
 then report: who is swept, where tasks land (`work/tasks.db`), how to close
-one (ask in chat), what is not covered, and that the
+one (ask in chat, or in the dashboard), what is not covered, and that the
 sweep reads only outbound messages — never the replies.

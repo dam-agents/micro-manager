@@ -42,8 +42,17 @@ who you usually delegate to, and which bots you talk to. A dry run shows you
 what it would add before it adds anything.
 
 Tasks are stored in a SQLite file on the agent's disk (`work/tasks.db`). They
-never leave it. To close a task, tell the agent in chat. The store needs
+never leave it. To close a task, tell the agent in chat, or click Close in the
+dashboard. The store needs
 Node 22.18 or newer and nothing else. See [`tasks/`](tasks) for the CLI.
+
+## Dashboard
+
+If Interactive artifacts are enabled, the agent can publish a private page that
+shows your open tasks, grouped by person, with the ones nobody picked up at the
+top. You can close tasks there. The page talks to a small server the agent runs
+(`tasks serve`). The server stops when the agent sleeps; the page then offers a
+button that asks the agent to start it again.
 
 ## License
 
