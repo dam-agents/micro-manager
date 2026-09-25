@@ -16,6 +16,7 @@ Config lives in `work/CONFIG.md`. Read it at the start of every run:
 - roster: U05UR59NJCX=Radek Jezek, U06H8CF4UUA=Jan Pokorny
 - bot_ids: U0ARMJVHY2F
 - last_sweep_at: 2026-09-23T09:00:00Z
+- dashboard_artifact: <artifact id, only if the dashboard is published>
 ```
 
 ## Sweep run (hourly schedule, or on request)
@@ -84,12 +85,46 @@ add:
 > This reads only your outbound messages, never the replies. Open means nothing
 > in your own messages closed it — not that the other person went quiet.
 
+**8. Keep the dashboard up.** If `dashboard_artifact` is set, start the task
+server as [Dashboard](#dashboard-optional) describes.
+
 ## Closing tasks (on request)
 
 The operator closes tasks in chat ("the DNS one is done"). Find it with
 `~/tasks/tasks list --status open`, confirm which one if more than one fits,
 then `~/tasks/tasks close <id>`. There is no reopen: if a closed task comes
 back, file the new message as a new task.
+
+The operator can also close tasks from the dashboard. That runs the same
+`close`, so nothing else changes.
+
+## Dashboard (optional)
+
+An interactive artifact that shows the tasks live and lets the operator close
+them. The page is [`tasks/dashboard.html`](tasks/dashboard.html); its data comes
+from `~/tasks/tasks serve`, a small HTTP server on `127.0.0.1:5555`. It needs
+Interactive artifacts enabled; read the `platform-artifacts` skill first.
+
+**Start the server.** It stops whenever the agent hibernates, and nothing else
+restarts it:
+
+```bash
+curl -sf 127.0.0.1:5555/health || nohup ~/tasks/tasks serve > /tmp/tasks-serve.log 2>&1 &
+sleep 1; curl -sf 127.0.0.1:5555/health
+```
+
+If the second check fails, show the operator `/tmp/tasks-serve.log`. When the
+page asks you in chat to start the server, do this and reply in one line.
+
+**Publish the page** once, on request: `create_artifact` with the contents of
+`tasks/dashboard.html` as is and `interactive: true`, then record its id as
+`dashboard_artifact` in `work/CONFIG.md`. The page loads tasks live, so never
+paste tasks into it and never republish it after a sweep. Republish only when
+`tasks/dashboard.html` itself changes. Only the latest version can reach the
+server.
+
+The server only reads tasks and closes them. Filing and reassigning stay with
+you, so the dedupe rules above always apply.
 
 ## Always
 

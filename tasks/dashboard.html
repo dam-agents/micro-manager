@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Delegated Tasks</title>
+<style>
+  :root {
+    --bg: #f7f7f5; --panel: #ffffff; --text: #1d1d1b; --muted: #6b6b66;
+    --line: #e4e4df; --accent: #2f5bd3; --warn-bg: #fff4e0; --warn: #8a5300;
+    --danger: #b3261e; --chip: #efefea;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161614; --panel: #1f1f1d; --text: #ececea; --muted: #9b9b95;
+      --line: #33332f; --accent: #8aa8ff; --warn-bg: #3a2c12; --warn: #f0c070;
+      --danger: #ff8a80; --chip: #2a2a27;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  main { max-width: 860px; margin: 0 auto; padding: 20px 16px 48px; }
+  header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  h1 { font-size: 20px; margin: 0; flex: 1; }
+  .meta { color: var(--muted); font-size: 12px; }
+  button {
+    font: inherit; border: 1px solid var(--line); background: var(--panel);
+    color: var(--text); border-radius: 6px; padding: 4px 10px; cursor: pointer;
+  }
+  button:hover { border-color: var(--muted); }
+  button:disabled { opacity: .5; cursor: default; }
+  button.confirm { border-color: var(--danger); color: var(--danger); }
+  .tabs { display: flex; gap: 4px; margin: 16px 0 12px; border-bottom: 1px solid var(--line); }
+  .tabs button {
+    border: none; border-bottom: 2px solid transparent; border-radius: 0;
+    background: none; padding: 6px 10px; color: var(--muted);
+  }
+  .tabs button[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); }
+  .count { color: var(--muted); font-size: 12px; margin-left: 4px; }
+  section { margin-bottom: 20px; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 0 0 6px; }
+  h2.needs-owner { color: var(--warn); }
+  ul { list-style: none; margin: 0; padding: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; }
+  li { display: flex; gap: 12px; align-items: flex-start; padding: 10px 12px; border-top: 1px solid var(--line); }
+  li:first-child { border-top: none; }
+  .body { flex: 1; min-width: 0; }
+  .title { font-weight: 600; color: var(--text); text-decoration: none; }
+  a.title:hover { color: var(--accent); text-decoration: underline; }
+  .context { color: var(--muted); margin-top: 2px; overflow-wrap: anywhere; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+  .chip { background: var(--chip); border-radius: 4px; padding: 0 6px; font-size: 12px; color: var(--muted); }
+  .notice { background: var(--warn-bg); color: var(--warn); border-radius: 8px; padding: 12px 14px; margin: 16px 0; }
+  .notice p { margin: 0 0 8px; }
+  .notice .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .empty { color: var(--muted); padding: 24px 0; text-align: center; }
+  .footnote { color: var(--muted); font-size: 12px; margin-top: 24px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Delegated tasks</h1>
+    <span class="meta" id="updated"></span>
+    <button id="reload" type="button">Reload</button>
+  </header>
+  <div id="notice"></div>
+  <div class="tabs" role="tablist">
+    <button type="button" role="tab" data-tab="open" aria-selected="true">Open<span class="count" id="count-open"></span></button>
+    <button type="button" role="tab" data-tab="closed" aria-selected="false">Closed<span class="count" id="count-closed"></span></button>
+  </div>
+  <div id="list"></div>
+  <p class="footnote">
+    This reads only your outbound messages, never the replies. Open means nothing
+    in your own messages closed it, not that the other person went quiet.
+  </p>
+</main>
+<script>
+(() => {
+  const state = { tab: "open", data: null, loading: false, confirmId: null, startAsked: false };
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const hasBridge = () => typeof window.platform?.request === "function";
+
+  function daysAgo(date) {
+    const d = Math.floor((Date.now() - new Date(date).getTime()) / 86400000);
+    return d <= 0 ? "today" : d === 1 ? "1 day ago" : `${d} days ago`;
+  }
+
+  function showNotice(html) { $("notice").innerHTML = html ? `<div class="notice">${html}</div>` : ""; }
+
+  function noticeFor(reason) {
+    if (reason === "app-not-listening") {
+      return state.startAsked
+        ? `<p>Asked the agent to start the task server. Retrying every few seconds.</p>
+           <div class="actions"><button type="button" data-action="retry">Retry now</button></div>`
+        : `<p>The task server is not running. It stops when the agent sleeps.</p>
+           <div class="actions">
+             <button type="button" data-action="start">Ask the agent to start it</button>
+             <button type="button" data-action="retry">Retry</button>
+           </div>`;
+    }
+    if (reason === "timeout") {
+      return `<p>No answer yet. The agent may still be waking up, or this page is not open in the chat beside the micro-manager agent.</p>
+              <div class="actions"><button type="button" data-action="retry">Retry</button></div>`;
+    }
+    return `<p>Could not reach the task server (${esc(reason)}).</p>
+            <div class="actions"><button type="button" data-action="retry">Retry</button></div>`;
+  }
+
+  async function api(method, path) {
+    const res = await window.platform.request({ method, path });
+    let body = null;
+    try { body = JSON.parse(res.body); } catch {}
+    if (res.status !== 200) throw Object.assign(new Error(body?.error || `HTTP ${res.status}`), { reason: `HTTP ${res.status}: ${body?.error ?? ""}` });
+    return body;
+  }
+
+  let retryTimer = null;
+  async function load() {
+    if (!hasBridge()) {
+      showNotice("<p>Open this page in the chat preview beside the micro-manager agent to see live tasks.</p>");
+      return;
+    }
+    if (state.loading) return;
+    state.loading = true;
+    $("reload").disabled = true;
+    if (!state.data) $("list").innerHTML = `<p class="empty">Loading tasks…</p>`;
+    try {
+      state.data = await api("GET", "/tasks");
+      state.startAsked = false;
+      clearTimeout(retryTimer);
+      showNotice("");
+      $("updated").textContent = `Updated ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+    } catch (err) {
+      showNotice(noticeFor(err.reason || err.message));
+      if (state.startAsked && err.reason === "app-not-listening") retryTimer = setTimeout(load, 8000);
+      if (!state.data) $("list").innerHTML = "";
+    } finally {
+      state.loading = false;
+      $("reload").disabled = false;
+      render();
+    }
+  }
+
+  function row(t, roster) {
+    const title = t.permalink
+      ? `<a class="title" href="${esc(t.permalink)}" target="_blank" rel="noopener">${esc(t.title)}</a>`
+      : `<span class="title">${esc(t.title)}</span>`;
+    const chips = [
+      t.channel && `<span class="chip">${esc(t.channel)}</span>`,
+      `<span class="chip" title="${esc(t.asked_on)}">asked ${daysAgo(t.asked_on)}</span>`,
+      t.status === "closed" && t.assignee_slack && `<span class="chip">${esc(roster[t.assignee_slack] || t.assignee_slack)}</span>`,
+      t.status === "closed" && t.closed_at && `<span class="chip">closed ${daysAgo(t.closed_at)}</span>`,
+    ].filter(Boolean).join("");
+    const action = t.status === "open"
+      ? `<button type="button" data-action="close" data-id="${t.id}" class="${state.confirmId === t.id ? "confirm" : ""}">${state.confirmId === t.id ? "Click to confirm" : "Close"}</button>`
+      : "";
+    return `<li><div class="body">${title}<div class="context">${esc(t.context)}</div><div class="chips">${chips}</div></div>${action}</li>`;
+  }
+
+  function render() {
+    for (const b of document.querySelectorAll(".tabs button")) b.setAttribute("aria-selected", String(b.dataset.tab === state.tab));
+    if (!state.data) return;
+    const { tasks, roster, closed_window_days } = state.data;
+    const open = tasks.filter((t) => t.status === "open");
+    const closed = tasks.filter((t) => t.status === "closed").sort((a, b) => (b.closed_at ?? "").localeCompare(a.closed_at ?? ""));
+    $("count-open").textContent = open.length;
+    $("count-closed").textContent = closed.length;
+
+    if (state.tab === "closed") {
+      $("list").innerHTML = closed.length
+        ? `<section><ul>${closed.map((t) => row(t, roster)).join("")}</ul></section>`
+        : `<p class="empty">Nothing closed in the last ${closed_window_days} days.</p>`;
+      return;
+    }
+    if (!open.length) { $("list").innerHTML = `<p class="empty">Nothing open. Everything you handed out is closed.</p>`; return; }
+
+    const groups = new Map();
+    for (const t of open) {
+      const key = t.assignee_slack || "";
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(t);
+    }
+    const name = (id) => roster[id] || id;
+    const keys = [...groups.keys()].sort((a, b) => (a === "" ? -1 : b === "" ? 1 : name(a).localeCompare(name(b))));
+    $("list").innerHTML = keys.map((k) => `
+      <section>
+        <h2 class="${k ? "" : "needs-owner"}">${k ? esc(name(k)) : "Needs an owner"} · ${groups.get(k).length}</h2>
+        <ul>${groups.get(k).map((t) => row(t, roster)).join("")}</ul>
+      </section>`).join("");
+  }
+
+  let confirmTimer = null;
+  async function closeTask(id) {
+    if (state.confirmId !== id) {
+      state.confirmId = id;
+      clearTimeout(confirmTimer);
+      confirmTimer = setTimeout(() => { state.confirmId = null; render(); }, 4000);
+      render();
+      return;
+    }
+    state.confirmId = null;
+    clearTimeout(confirmTimer);
+    try {
+      await api("POST", `/tasks/${id}/close`);
+      await load();
+    } catch (err) {
+      showNotice(noticeFor(err.reason || err.message));
+      render();
+    }
+  }
+
+  document.addEventListener("click", (e) => {
+    const el = e.target.closest("button");
+    if (!el) return;
+    if (el.dataset.tab) { state.tab = el.dataset.tab; render(); return; }
+    if (el.id === "reload" || el.dataset.action === "retry") { load(); return; }
+    if (el.dataset.action === "close") { closeTask(Number(el.dataset.id)); return; }
+    if (el.dataset.action === "start" && typeof window.platform?.sendPrompt === "function") {
+      window.platform.sendPrompt("The dashboard cannot reach the task server. Start it as CLAUDE.md → Dashboard describes.");
+      state.startAsked = true;
+      showNotice(noticeFor("app-not-listening"));
+      retryTimer = setTimeout(load, 8000);
+    }
+  });
+  window.addEventListener("focus", () => load());
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") load(); });
+
+  load();
+})();
+</script>
+</body>
+</html>

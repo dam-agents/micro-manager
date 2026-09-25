@@ -1,6 +1,7 @@
 import { mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { parseArgs } from "node:util";
+import { ARTIFACT_API_PORT, createTaskServer } from "./server.ts";
 import { DuplicateTaskError, InvalidInputError, NotFoundError, Store } from "./store.ts";
 
 const USAGE = `usage:
@@ -9,12 +10,14 @@ const USAGE = `usage:
   tasks list [--status open|closed|all] [--assignee <slack id> | --needs-owner]
   tasks has <permalink>
   tasks close <id>
+  tasks serve         HTTP API for the dashboard artifact, on 127.0.0.1:5555
 
 Prints JSON on stdout. Exit codes: 0 ok, 1 error, 2 permalink already filed.
 Database: $TASKS_DB, or work/tasks.db in the repo root.`;
 
 // The repo is checked out at $HOME, so this lands in $HOME/work/tasks.db.
 const DEFAULT_DB = resolve(import.meta.dirname, "../../work/tasks.db");
+const CONFIG_PATH = resolve(import.meta.dirname, "../../work/CONFIG.md");
 
 function print(value: unknown): void {
   process.stdout.write(`${JSON.stringify(value, null, 2)}\n`);
@@ -100,15 +103,23 @@ if (!command || command === "help" || command === "--help") {
 const dbPath = process.env.TASKS_DB || DEFAULT_DB;
 mkdirSync(dirname(dbPath), { recursive: true });
 const store = new Store(dbPath);
-try {
-  run(store, command, rest);
-} catch (err) {
-  if (err instanceof DuplicateTaskError) fail(err.message, 2, { existing: err.existing });
-  if (err instanceof InvalidInputError || err instanceof NotFoundError) fail(err.message);
-  if (err instanceof TypeError && "code" in err && String(err.code).startsWith("ERR_PARSE_ARGS")) {
-    fail(`${err.message}\n${USAGE}`);
+
+if (command === "serve") {
+  // Loopback only: the platform relays the page's requests from inside the pod.
+  createTaskServer(store, CONFIG_PATH).listen(ARTIFACT_API_PORT, "127.0.0.1", () => {
+    print({ listening: `http://127.0.0.1:${ARTIFACT_API_PORT}`, db: dbPath });
+  });
+} else {
+  try {
+    run(store, command, rest);
+  } catch (err) {
+    if (err instanceof DuplicateTaskError) fail(err.message, 2, { existing: err.existing });
+    if (err instanceof InvalidInputError || err instanceof NotFoundError) fail(err.message);
+    if (err instanceof TypeError && "code" in err && String(err.code).startsWith("ERR_PARSE_ARGS")) {
+      fail(`${err.message}\n${USAGE}`);
+    }
+    throw err;
+  } finally {
+    store.dispose();
   }
-  throw err;
-} finally {
-  store.dispose();
 }
