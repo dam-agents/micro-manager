@@ -3,10 +3,10 @@ schemaVersion: v1
 id: micro-manager
 name: Micro Manager
 description: >-
-  Reads your own outbound Slack messages every hour, finds the tasks you handed
-  to other people, and files the new ones in a local SQLite task store.
-  Dedupes against every task ever filed, including closed ones.
-tagline: Everything you delegated in passing, in one list.
+  Reads the messages you send on Slack throughout the day and keeps a list of
+  everything you've asked someone to do. Each task stays on the list until you
+  mark it done, so nothing you handed off slips through the cracks.
+tagline: Never lose track of what you asked someone to do in Slack.
 category: productivity
 icon: users
 harnesses: [claude-code, bob]
