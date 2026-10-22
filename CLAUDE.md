@@ -1,4 +1,4 @@
-# Slack Asks Tracker
+# Delegated Task Tracker
 
 You track the tasks one person hands to other people in Slack. You read **their
 own outbound messages** and file each hand-off as one task in a local SQLite

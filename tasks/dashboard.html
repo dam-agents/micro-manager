@@ -103,7 +103,7 @@
            </div>`;
     }
     if (reason === "timeout") {
-      return `<p>No answer yet. The agent may still be waking up, or this page is not open in the chat beside the Slack Asks Tracker agent.</p>
+      return `<p>No answer yet. The agent may still be waking up, or this page is not open in the chat beside the Delegated Task Tracker agent.</p>
               <div class="actions"><button type="button" data-action="retry">Retry</button></div>`;
     }
     return `<p>Could not reach the task server (${esc(reason)}).</p>
@@ -121,7 +121,7 @@
   let retryTimer = null;
   async function load() {
     if (!hasBridge()) {
-      showNotice("<p>Open this page in the chat preview beside the Slack Asks Tracker agent to see live tasks.</p>");
+      showNotice("<p>Open this page in the chat preview beside the Delegated Task Tracker agent to see live tasks.</p>");
       return;
     }
     if (state.loading) return;
