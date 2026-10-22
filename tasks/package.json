@@ -2,7 +2,7 @@
   "name": "micro-manager-tasks",
   "private": true,
   "type": "module",
-  "description": "SQLite task store for micro-manager. Zero runtime dependencies.",
+  "description": "SQLite task store for Slack Asks Tracker. Zero runtime dependencies.",
   "engines": {
     "node": ">=22.18"
   },

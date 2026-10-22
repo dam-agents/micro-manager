@@ -1,7 +1,7 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/dam-agents/dam-starter-kits/main/kit.schema.json
 schemaVersion: v1
 id: micro-manager
-name: Micro Manager
+name: Slack Asks Tracker
 description: >-
   Reads the messages you send on Slack throughout the day and keeps a list of
   everything you've asked someone to do. Each task stays on the list until you
