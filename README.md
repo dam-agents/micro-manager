@@ -1,11 +1,11 @@
-# micro-manager
+# Slack Asks Tracker
 
 Never lose track of what you asked someone to do in Slack.
 
 "Can you check the DNS?" "Who can set up staging?" You ask, the chat scrolls
 away, and a week later nobody remembers. Often not even you.
 
-micro-manager reads the messages you send on Slack throughout the day and keeps
+Slack Asks Tracker reads the messages you send on Slack throughout the day and keeps
 a list of everything you've asked someone to do. Each task stays on the list
 until you mark it done.
 
